@@ -14,6 +14,7 @@ const val ROUTE_ADD_PRODUCT = "add_product"
 const val ROUTE_VIEW_PROD = "view_prod"
 const val ROUTE_BOOKING = "booking_list"
 const val ROUTE_BOOKING_LIST = "booking_detail"
+const val ROUTE_SHOPPING_CART = "shopping_cart"
 
 
 

@@ -45,7 +45,7 @@ data class Vehicle(
 fun VehicleListScreen(navController: NavController, Vehicles: List<Vehicle>) {
     var isLoading by remember { mutableStateOf(true) }
     var vehicleList by remember { mutableStateOf(emptyList<Vehicle>()) }
-    var displayedVehicleCount by remember { mutableStateOf(1) }
+    var displayedVehicleCount by remember { mutableStateOf(10) }
     var progress by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -73,7 +73,7 @@ fun VehicleListScreen(navController: NavController, Vehicles: List<Vehicle>) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Magenta,
+                    containerColor = Color(0xff6200EE),
                     titleContentColor = Color.White,
                 )
             )
@@ -90,14 +90,14 @@ fun VehicleListScreen(navController: NavController, Vehicles: List<Vehicle>) {
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(progress = progress / 100f)
-                        Text(text = "Loading... $progress%", fontSize = 20.sp)
+                        Text(text = "Fetching vehicles...", fontSize = 20.sp)
                     }
                 } else {
                     if (vehicleList.isEmpty()) {
                         Text(text = "No vehicles found", modifier = Modifier.align(Alignment.CenterHorizontally))
                     } else {
-                        LazyVerticalGrid(columns = GridCells.Fixed(2)) {
-                            items(vehicleList.take(7)) { vehicle ->
+                        LazyVerticalGrid(columns = GridCells.Fixed(1)) {
+                            items(vehicleList) { vehicle ->
                                 VehicleListItem(vehicle) {
                                     navController.navigate("vehicleDetail/${vehicle.id}")
                                 }
@@ -110,7 +110,7 @@ fun VehicleListScreen(navController: NavController, Vehicles: List<Vehicle>) {
                                 onClick = { displayedVehicleCount += 8 },
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             ) {
-                                Text(text = "Load More")
+                                Text(text = "More Vehicles")
                             }
                         }
                     }

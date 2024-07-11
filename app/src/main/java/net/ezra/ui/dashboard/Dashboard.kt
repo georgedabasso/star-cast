@@ -1,12 +1,11 @@
 package net.ezra.ui.dashboard
 
-
-
 import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -45,21 +44,21 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.toObject
 import net.ezra.navigation.ROUTE_LOGIN
-
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
+import net.ezra.navigation.ROUTE_ADD_PRODUCT
 import net.ezra.navigation.ROUTE_ADD_STUDENTS
 import net.ezra.navigation.ROUTE_BOOKING
 import net.ezra.navigation.ROUTE_BOOKING_LIST
 import net.ezra.navigation.ROUTE_DASHBOARD
 import net.ezra.navigation.ROUTE_HOME
 
-
 private var progressDialog: ProgressDialog? = null
+
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun DashboardScreen(navController: NavHostController)  {
+fun DashboardScreen(navController: NavHostController) {
     var school by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     val currentUser = FirebaseAuth.getInstance().currentUser
@@ -70,19 +69,13 @@ fun DashboardScreen(navController: NavHostController)  {
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-
     var loading by remember { mutableStateOf(false) }
-
     val firestores = Firebase.firestore
-
-
     val context = LocalContext.current
 
     BackHandler {
         navController.popBackStack()
-
     }
-
 
     // Fetch user details from Firestore
     LaunchedEffect(key1 = currentUser?.uid) {
@@ -120,96 +113,57 @@ fun DashboardScreen(navController: NavHostController)  {
                     Text(text = "Dashboard", color = Color.White, fontSize = 30.sp)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xff0FB06A),
+                    containerColor = Color(0xff6200EE),
                     titleContentColor = Color.White,
                 ),
                 navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.ArrowBack, "backIcon",tint = Color.White)
+                    IconButton(onClick = {
+                        navController.navigate(ROUTE_HOME)
+                    }) {
+                        Icon(Icons.Filled.ArrowBack, "backIcon", tint = Color.White)
                     }
                 },
-
-
-
             )
         }, content = {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xff9AEDC9)),
-//                verticalArrangement = Arrangement.Center,
+                    .background(Color.LightGray),
                 horizontalAlignment = Alignment.CenterHorizontally
-
             ) {
+                val dashboardItems = listOf(
+                    DashboardItemData(
+                        title = "Add Vehicles",
+                        icon = Icons.Default.Add,
+                        badgeCount = 3,
+                        onClick = {
+                            navController.navigate(ROUTE_ADD_PRODUCT)
+                        }
+                    ),
+                    DashboardItemData(
+                        title = "My Vehicles",
+                        icon = Icons.Default.ShoppingCart,
+                        badgeCount = 4,
+                        onClick = {
+                            navController.navigate(ROUTE_BOOKING_LIST)
+                            // Navigate to booking list screen
+                        }
+                    ),
+                    // Add more dashboard items as needed
+                )
 
-
-//                            Dashboard starts here
-
-                            val dashboardItems = listOf(
-                                DashboardItemData(
-                                    title = "Profile",
-                                    icon = Icons.Default.AccountCircle,
-                                    badgeCount = 0,
-                                    onClick = {
-                                        // Navigate to profile screen
-                                    }
-                                ),
-                                DashboardItemData(
-                                    title = "request a service",
-                                    icon = Icons.Default.Add,
-                                    badgeCount = 3,
-                                    onClick = {
-                                        navController.navigate(ROUTE_BOOKING)
-                                    }
-                                ),
-                                DashboardItemData(
-                                    title = "My Requests",
-                                    icon = Icons.Default.ShoppingCart,
-                                    badgeCount = 4,
-                                    onClick = {
-                                       navController.navigate(ROUTE_BOOKING_LIST)
-                                    }
-                                ),
-                                // Add more dashboard items as needed
-                            )
-
-
-
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(2),
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                items(dashboardItems) { item ->
-                                    DashboardItem(item)
-                                }
-                            }
-
-
-
-
-
-
-//                            Dashboard ends here
-
-
-
-
-
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    items(dashboardItems) { item ->
+                        DashboardItem(item)
+                    }
+                }
             }
-
-        })
-
+        }
+    )
 }
-
-
-
-
-
-
-
-
-
-
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -217,11 +171,11 @@ fun DashboardItem(item: DashboardItemData) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        shape = RoundedCornerShape(8.dp),
+            .padding(8.dp)
+            .background(Color.White)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { item.onClick() },
         elevation = 8.dp,
-        backgroundColor = Color.White,
-        onClick = item.onClick
     ) {
         Row(
             modifier = Modifier
@@ -232,45 +186,46 @@ fun DashboardItem(item: DashboardItemData) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = "Dashboard Icon",
-                tint = Color.Black,
+                tint = Color(0xff0FB06A),
                 modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.subtitle1,
+                style = MaterialTheme.typography.subtitle1.copy(fontSize = 18.sp),
                 color = Color.Black
             )
-            // Add a badge if the badge count is greater than 0
             if (item.badgeCount > 0) {
                 Badge(count = item.badgeCount)
             }
         }
     }
 }
+
 @Composable
 fun Badge(count: Int) {
     Box(
         modifier = Modifier
             .padding(start = 8.dp)
-            .size(20.dp)
+            .size(24.dp)
             .clip(CircleShape)
             .background(Color.Red),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = count.toString(),
-            style = MaterialTheme.typography.caption,
-            color = Color.White
+            style = MaterialTheme.typography.caption.copy(color = Color.White)
         )
     }
 }
+
 data class DashboardItemData(
     val title: String,
     val icon: ImageVector,
     val badgeCount: Int,
     val onClick: () -> Unit
 )
+
 data class User(
     val userId: String = "",
     val school: String = "",
@@ -282,12 +237,10 @@ fun saveUserDetails(user: User, param: (Any) -> Unit) {
     firestore.collection("users").document(user.userId)
         .set(user, SetOptions.merge())
         .addOnSuccessListener {
-
             progressDialog?.dismiss()
             // Success message or navigation
         }
         .addOnFailureListener {
-
             progressDialog?.dismiss()
             // Handle failure
         }

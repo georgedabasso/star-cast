@@ -1,111 +1,150 @@
-package net.ezra.ui.vehicles
+package net.ezra.ui.products
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.*
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBarDefaults
+//noinspection UsingMaterialAndMaterial3Libraries
+import androidx.compose.material.Text
+//noinspection UsingMaterialAndMaterial3Libraries
+import androidx.compose.material.Icon
+//noinspection UsingMaterialAndMaterial3Libraries
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.toObject
+import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.tasks.await
-import net.ezra.navigation.ROUTE_VIEW_PROD
-import net.ezra.ui.products.Vehicle
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter", "UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VehicleDetailScreen(navController: NavController, vehicleId: String) {
-
+fun VehicleDetailScreen(navController: NavController,  vehicleId: String) {
     var vehicle by remember { mutableStateOf<Vehicle?>(null) }
-    val scaffoldState = rememberScaffoldState()
-    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(vehicleId) {
         fetchVehicle(vehicleId) { fetchedVehicle ->
-            vehicle = fetchedVehicle
+            vehicle = fetchedVehicle as? Vehicle
         }
     }
 
     Scaffold(
-        scaffoldState = scaffoldState,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = vehicle?.name ?: "Details",
-                        fontSize = 30.sp,
-                        color = Color.White
+                        text =  vehicle?.name ?: "Details",
+                        fontSize = 24.sp,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.navigate(ROUTE_VIEW_PROD)
+                        navController.navigateUp()
                     }) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            Icons.Default.ArrowBack,
                             "backIcon",
                             tint = Color.White
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Magenta,
+                    containerColor = Color(0xff6200EE),
                     titleContentColor = Color.White,
                 )
             )
         },
         content = {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                vehicle?.let {
-                    Column(modifier = Modifier.padding(16.dp)) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                vehicle?.let { product ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(Color.White, Color.LightGray)))
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Spacer(modifier = Modifier.height(50.dp))
+
                         Image(
-                            painter = rememberAsyncImagePainter(it.imageUrl),
+                            painter = rememberImagePainter(product.imageUrl),
                             contentDescription = null,
-                            modifier = Modifier.size(200.dp)
+                            modifier = Modifier
+                                .size(200.dp)
+                                .padding(8.dp)
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(Color.White, shape = MaterialTheme.shapes.medium),
+                            contentScale = ContentScale.Crop
                         )
-                        Text(text = it.name, style = MaterialTheme.typography.h5)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Price per day: \$${it.price}", style = MaterialTheme.typography.subtitle1)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = it.description, style = MaterialTheme.typography.body1)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Registration Number: ${it.registrationNumber}", style = MaterialTheme.typography.subtitle1)
                         Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = product.name,
+                            style = MaterialTheme.typography.h5.copy(fontWeight = FontWeight.Bold),
+                            color = Color.Black,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Price: $${product.price}",
+                            style = MaterialTheme.typography.subtitle1.copy(color = Color.Green),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = product.description,
+                            style = MaterialTheme.typography.body1,
+                            color = Color.Gray,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Buy Button
                         Button(
                             onClick = {
-                                scope.launch {
-                                    scaffoldState.snackbarHostState.showSnackbar("Booking confirmed!")
-                                    navController.navigate(ROUTE_VIEW_PROD)
-                                }
+                                addToCartAndNavigate(navController, product)
                             },
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xff0FB06A)
-                            )
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .shadow(2.dp, RoundedCornerShape(15.dp))
                         ) {
-                            Text(text = "Book Now")
+                            Text("Buy", fontSize = 18.sp)
                         }
                     }
                 }
@@ -114,10 +153,16 @@ fun VehicleDetailScreen(navController: NavController, vehicleId: String) {
     )
 }
 
-private suspend fun fetchVehicle(vehicleId: String, onSuccess: (Vehicle?) -> Unit) {
+private fun addToCartAndNavigate(navController: NavController,product: Vehicle) {
+    CartState.addToCart(CartItem(product))
+    navController.navigateUp()
+}
+
+suspend fun fetchVehicle(vehicleId: String, onSuccess: (Vehicle?) -> Unit) {
     val firestore = FirebaseFirestore.getInstance()
     val docRef = firestore.collection("vehicles").document(vehicleId)
     val snapshot = docRef.get().await()
     val vehicle = snapshot.toObject<Vehicle>()
     onSuccess(vehicle)
 }
+data class CartItem(val product:  Vehicle)

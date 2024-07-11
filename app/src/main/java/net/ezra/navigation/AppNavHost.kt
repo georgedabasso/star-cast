@@ -1,5 +1,9 @@
 package net.ezra.navigation
 
+//import net.ezra.ui.auth.SignupScreen
+
+
+//import net.ezra.ui.products.BookingScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,21 +18,18 @@ import net.ezra.ui.SplashScreen
 import net.ezra.ui.about.AboutScreen
 import net.ezra.ui.auth.LoginScreen
 import net.ezra.ui.auth.SignUpScreen
-import net.ezra.ui.booking.AddVehicleScreen
-import net.ezra.ui.booking.BookingListScreen
-import net.ezra.ui.booking.BookingScreen
+
 import net.ezra.ui.bookings.BookingDetailScreen
 import net.ezra.ui.dashboard.DashboardScreen
-//import net.ezra.ui.auth.SignupScreen
 import net.ezra.ui.home.HomeScreen
-
-
-//import net.ezra.ui.products.BookingScreen
+import net.ezra.ui.products.ShoppingCartScreen
+import net.ezra.ui.products.VehicleDetailScreen
+import net.ezra.ui.products.VehicleListScreen
 import net.ezra.ui.students.AddStudents
 import net.ezra.ui.students.Search
 import net.ezra.ui.students.Students
-import net.ezra.ui.vehicles.VehicleDetailScreen
-import net.ezra.ui.products.VehicleListScreen
+import net.ezra.ui.vehicles.AddvehicleScreen
+import net.ezra.ui.vehicles.UserVehiclesScreen
 
 
 @Composable
@@ -93,7 +94,7 @@ fun AppNavHost(
         }
 
         composable(ROUTE_ADD_PRODUCT) {
-            AddVehicleScreen(navController = navController){}
+            AddvehicleScreen(navController = navController){}
         }
 
         composable(ROUTE_VIEW_PROD) {
@@ -106,11 +107,9 @@ fun AppNavHost(
             val productId = backStackEntry.arguments?.getString("VehicleId") ?: ""
             VehicleDetailScreen(navController, productId)
         }
-        composable(ROUTE_BOOKING) {
-            BookingScreen(navController = navController )
-        }
+
         composable(ROUTE_BOOKING_LIST) {
-            BookingListScreen(navController = navController )
+            UserVehiclesScreen(navController = navController )
         }
 
 
@@ -121,8 +120,9 @@ fun AppNavHost(
             val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
             BookingDetailScreen(navController, bookingId)
         }
-
-
+        composable(ROUTE_SHOPPING_CART) {
+            ShoppingCartScreen(navController = navController)
+        }
 
 
 

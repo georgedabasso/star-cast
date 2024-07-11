@@ -1,4 +1,4 @@
-package net.ezra.ui.booking
+package net.ezra.ui.vehicles
 
 import android.annotation.SuppressLint
 import android.net.Uri
@@ -7,54 +7,75 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Text
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import kotlinx.coroutines.launch
-import net.ezra.navigation.ROUTE_ADD_PRODUCT
-import net.ezra.navigation.ROUTE_HOME
-import net.ezra.navigation.ROUTE_VIEW_PROD
+import net.ezra.navigation.ROUTE_BOOKING_LIST
+import java.util.UUID
 
-import java.util.*
-
-@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter", "UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddVehicleScreen(navController: NavController, onVehicleAdded: () -> Unit) {
+fun AddvehicleScreen(navController: NavController, onvehicleAdded: () -> Unit) {
     var vehicleName by remember { mutableStateOf("") }
     var vehicleDescription by remember { mutableStateOf("") }
     var vehiclePrice by remember { mutableStateOf("") }
     var registrationNumber by remember { mutableStateOf("") }
     var vehicleImageUri by remember { mutableStateOf<Uri?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
+    // Track if fields are empty
     var vehicleNameError by remember { mutableStateOf(false) }
     var vehicleDescriptionError by remember { mutableStateOf(false) }
     var vehiclePriceError by remember { mutableStateOf(false) }
-    var registrationNumberError by remember { mutableStateOf(false) }
     var vehicleImageError by remember { mutableStateOf(false) }
+    var registrationNumberError by remember { mutableStateOf(false) }
 
-    var isLoading by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             vehicleImageUri = it
@@ -65,11 +86,11 @@ fun AddVehicleScreen(navController: NavController, onVehicleAdded: () -> Unit) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(text = "Add Vehicle", fontSize = 30.sp, color = Color.White)
+                    Text(text = "Add vehicles", fontSize = 24.sp, color = Color.White)
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.navigate(ROUTE_VIEW_PROD)
+                        navController.navigate(ROUTE_BOOKING_LIST)
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -78,209 +99,224 @@ fun AddVehicleScreen(navController: NavController, onVehicleAdded: () -> Unit) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xff0FB06A),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF6200EE),
                     titleContentColor = Color.White,
                 )
             )
-        }
-    ) {
-        if (isLoading) {
-            LoadingDialog()
-        }
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xffE8F5E9))
-                .padding(16.dp)
-        ) {
-            item {
-                if (vehicleImageUri != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(vehicleImageUri),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(Color.White)
-                            .padding(8.dp)
-                    )
-                } else {
+        },
+        content = {
+            if (isLoading) {
+                LoadingDialog()
+            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(16.dp) ,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(70.dp))
+                }
+                item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(Color(0xffC8E6C9)),
+                            .background(Color.Gray)
+                            .padding(16.dp)
+                            .clickable { launcher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No Image Selected", modifier = Modifier.padding(8.dp))
+                        if (vehicleImageUri != null) {
+                            Image(
+                                painter = rememberImagePainter(vehicleImageUri),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Text("Tap to select an image", color = Color.White)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = vehicleName,
+                        onValueChange = { vehicleName = it },
+                        label = { Text("vehicle Name") },
+                        isError = vehicleNameError,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color(0xff0FB06A),
+                            unfocusedBorderColor = Color.Gray,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLabelColor = Color.White,
+                            cursorColor = Color(0xff0FB06A),
+                            textColor = Color.Black
+                        )
+
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = vehicleDescription,
+                        onValueChange = { vehicleDescription = it },
+                        label = { Text("vehicle Description") },
+                        isError = vehicleDescriptionError,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color(0xff0FB06A),
+                            unfocusedBorderColor = Color.Gray,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLabelColor = Color.White,
+                            cursorColor = Color(0xff0FB06A),
+                            textColor = Color.Black
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = vehiclePrice,
+                        onValueChange = { vehiclePrice = it },
+                        label = { Text("vehicle Price") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardActions = KeyboardActions(onDone = { /* Handle Done action */ }),
+                        isError = vehiclePriceError,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color(0xff0FB06A),
+                            unfocusedBorderColor = Color.Gray,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLabelColor = Color.White,
+                            cursorColor = Color(0xff0FB06A),
+                            textColor = Color.Black
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = registrationNumber,
+                        onValueChange = { registrationNumber = it },
+                        label = { Text("Registration Number") },
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = registrationNumberError,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = Color(0xff0FB06A),
+                            unfocusedBorderColor = Color.Gray,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedLabelColor = Color.White,
+                            cursorColor = Color(0xff0FB06A),
+                            textColor = Color.Black
+                        )
+
+                    )
+
+
+                    if (vehicleNameError) {
+                        Text("vehicle Name is required", color = Color.Red)
+                    }
+                    if (vehicleDescriptionError) {
+                        Text("vehicle Description is required", color = Color.Red)
+                    }
+                    if (vehiclePriceError) {
+                        Text("vehicle Price is required", color = Color.Red)
+                    }
+                    if (vehicleImageError) {
+                        Text("vehicle Image is required", color = Color.Red)
+                    }
+                    if (registrationNumberError) {
+                        Text("Registration Number is required", color = Color.Red)
+                    }
+
+                    Button(
+                        onClick = {
+                            // Reset error flags
+                            vehicleNameError = vehicleName.isBlank()
+                            vehicleDescriptionError = vehicleDescription.isBlank()
+                            vehiclePriceError = vehiclePrice.isBlank()
+                            vehicleImageError = vehicleImageUri == null
+
+                            // Add vehicle if all fields are filled
+                            if (!vehicleNameError && !vehicleDescriptionError && !vehiclePriceError && !vehicleImageError) {
+                                isLoading = true
+                                addvehicleToFirestore(
+                                    navController,
+                                    onvehicleAdded,
+                                    vehicleName,
+                                    vehicleDescription,
+                                    vehiclePrice.toDouble(),
+                                    registrationNumber,
+                                    vehicleImageUri,
+                                    onLoadingChange = { isLoading = it }
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(Color(0xff0FB06A)),
+                        modifier = Modifier
+                            .clickable(indication = rememberRipple(bounded = true), interactionSource = remember { MutableInteractionSource() }) { /* Handle click */ }
+                            .padding(16.dp),
+                        shape = MaterialTheme.shapes.small
+
+                    ) {
+                        Text("Add vehicle", color = Color.White, fontSize = 16.sp)
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { launcher.launch("image/*") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xff4CAF50))
-                ) {
-                    Text("Select Image", color = Color.White)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextField(
-                    value = vehicleName,
-                    onValueChange = { vehicleName = it },
-                    label = { Text("Vehicle Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = vehicleNameError
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = vehicleDescription,
-                    onValueChange = { vehicleDescription = it },
-                    label = { Text("Vehicle Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = vehicleDescriptionError
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = vehiclePrice,
-                    onValueChange = { vehiclePrice = it },
-                    label = { Text("Vehicle Price") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    keyboardActions = KeyboardActions(onDone = { /* Handle Done action */ }),
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = vehiclePriceError
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = registrationNumber,
-                    onValueChange = { registrationNumber = it },
-                    label = { Text("Registration Number") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = registrationNumberError
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (vehicleNameError) {
-                    Text(
-                        "Vehicle Name is required",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.caption
-                    )
-                }
-                if (vehicleDescriptionError) {
-                    Text(
-                        "Vehicle Description is required",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.caption
-                    )
-                }
-                if (vehiclePriceError) {
-                    Text(
-                        "Vehicle Price is required",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.caption
-                    )
-                }
-                if (registrationNumberError) {
-                    Text(
-                        "Registration Number is required",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.caption
-                    )
-                }
-                if (vehicleImageError) {
-                    Text(
-                        "Vehicle Image is required",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.caption
-                    )
-                }
-
-                Button(
-                    onClick = {
-                        vehicleNameError = vehicleName.isBlank()
-                        vehicleDescriptionError = vehicleDescription.isBlank()
-                        vehiclePriceError = vehiclePrice.isBlank()
-                        registrationNumberError = registrationNumber.isBlank()
-                        vehicleImageError = vehicleImageUri == null
-
-                        if (!vehicleNameError && !vehicleDescriptionError && !vehiclePriceError && !registrationNumberError && !vehicleImageError) {
-                            isLoading = true
-                            addVehicleToFirestore(
-                                navController,
-                                onVehicleAdded,
-                                vehicleName,
-                                vehicleDescription,
-                                vehiclePrice.toDouble(),
-                                registrationNumber,
-                                vehicleImageUri,
-                                { isLoading = false }
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xff4CAF50))
-                ) {
-                    Text("Add Vehicle", color = Color.White)
-                }
             }
         }
-    }
+    )
 }
-
 
 @Composable
-private fun LoadingDialog() {
-    Dialog(
-        onDismissRequest = { /* Handle dialog dismiss if needed */ }
-    ) {
-        Box(
-            modifier = Modifier
-                .width(280.dp)
-                .padding(16.dp)
-                .background(Color.White, shape = MaterialTheme.shapes.medium)
-        ) {
+fun LoadingDialog() {
+    AlertDialog(
+        onDismissRequest = {},
+        title = {
+            Text(text = "Loading")
+        },
+        text = {
             Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Adding Your Vehicle Details...", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Please wait while we add your vehicle")
             }
-        }
-    }
+        },
+        buttons = {}
+    )
 }
 
-private fun addVehicleToFirestore(
+private fun addvehicleToFirestore(
     navController: NavController,
-    onVehicleAdded: () -> Unit,
+    onvehicleAdded: () -> Unit,
     vehicleName: String,
     vehicleDescription: String,
     vehiclePrice: Double,
     registrationNumber: String,
     vehicleImageUri: Uri?,
-    onLoadingComplete: () -> Unit
+    onLoadingChange: (Boolean) -> Unit
 ) {
-    if (vehicleName.isEmpty() || vehicleDescription.isEmpty() || vehiclePrice.isNaN() || registrationNumber.isEmpty() || vehicleImageUri == null) {
-        onLoadingComplete()
+    if (vehicleName.isEmpty() || vehicleDescription.isEmpty() || vehiclePrice.isNaN() || vehicleImageUri == null || registrationNumber.isEmpty()) {
+        // Validate input fields
         return
     }
 
     val vehicleId = UUID.randomUUID().toString()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    if (currentUser == null) {
+        // Handle user not logged in
+        onLoadingChange(false)
+        return
+    }
+
     val firestore = Firebase.firestore
     val vehicleData = hashMapOf(
         "name" to vehicleName,
         "description" to vehicleDescription,
         "price" to vehiclePrice,
         "registrationNumber" to registrationNumber,
-        "imageUrl" to ""
+        "imageUrl" to "",
+        "userId" to currentUser.uid  // Associate vehicle with the current user
     )
 
     firestore.collection("vehicles").document(vehicleId)
@@ -290,23 +326,33 @@ private fun addVehicleToFirestore(
                 firestore.collection("vehicles").document(vehicleId)
                     .update("imageUrl", imageUrl)
                     .addOnSuccessListener {
+                        // Display toast message
                         Toast.makeText(
                             navController.context,
-                            "Vehicle added successfully!",
+                            "vehicle added successfully!",
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        navController.navigate(ROUTE_VIEW_PROD)
-                        onVehicleAdded()
-                        onLoadingComplete()
+                        // Navigate to the user's vehicles screen
+                        navController.navigate(ROUTE_BOOKING_LIST)
+
+                        // Invoke the onvehicleAdded callback
+                        onvehicleAdded()
+
+                        // Hide the loading dialog
+                        onLoadingChange(false)
                     }
                     .addOnFailureListener { e ->
-                        onLoadingComplete()
+                        // Handle error updating vehicle document
+                        // Hide the loading dialog
+                        onLoadingChange(false)
                     }
             }
         }
         .addOnFailureListener { e ->
-            onLoadingComplete()
+            // Handle error adding vehicle to Firestore
+            // Hide the loading dialog
+            onLoadingChange(false)
         }
 }
 

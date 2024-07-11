@@ -1,51 +1,72 @@
-package net.ezra.ui.booking
+package net.ezra.ui.vehicles
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.*
-import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.launch
+import net.ezra.navigation.ROUTE_DASHBOARD
 
-import net.ezra.navigation.ROUTE_HOME
-
-data class Booking(
-    var id: String = "",
+data class Vehicle(
+    val id: String = "",
     val name: String = "",
-    val email: String = "",
-    val phone: String = "",
-    val service: String = "",
-    val bookingDate: String = ""
+    val description: String = "",
+    val price: Double = 0.0,
+    val imageUrl: String = ""
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun BookingListScreen(navController: NavController) {
+fun UserVehiclesScreen(navController: NavHostController) {
     var isLoading by remember { mutableStateOf(true) }
-    var bookingList by remember { mutableStateOf(emptyList<Booking>()) }
-    var displayedBookingCount by remember { mutableStateOf(1) }
-    var progress by remember { mutableStateOf(0) }
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val userVehicles = remember { mutableStateListOf<Vehicle>() }
+    val specialOffers = remember { mutableStateListOf<Vehicle>() }
+    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        fetchBookings { fetchedBookings ->
-            bookingList = fetchedBookings
+    LaunchedEffect(currentUser) {
+        if (currentUser != null) {
+            coroutineScope.launch {
+                val db = Firebase.firestore
+
+                // Fetch regular vehicles
+                db.collection("vehicles")
+                    .whereEqualTo("userId", currentUser.uid)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        for (document in documents) {
+                            val vehicle = document.toObject(Vehicle::class.java)
+                            userVehicles.add(vehicle)
+                        }
+                        isLoading = false
+                    }
+                    .addOnFailureListener {
+                        isLoading = false
+                    }
+            }
+        } else {
             isLoading = false
         }
     }
@@ -54,59 +75,58 @@ fun BookingListScreen(navController: NavController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(text = "Bookings", fontSize = 30.sp, color = Color.White)
+                    Text(
+                        text = "Your Vehicles",
+                        fontSize = 20.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        navController.navigate(ROUTE_HOME)
-                    }) {
+                    IconButton(onClick = { navController.navigate(ROUTE_DASHBOARD) }) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "backIcon",
+                            contentDescription = "Back",
                             tint = Color.White
                         )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Magenta,
-                    titleContentColor = Color.White,
-                )
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xff6200EE))
             )
         },
-        content = {
-            Column(
-                modifier = Modifier
-                    .padding( top = 60.dp)
-                    .fillMaxSize()
-                    .background(Color.White)
-            ) {
-                if (isLoading) {
+        content = { paddingValues ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                val combinedVehicles = userVehicles + specialOffers
+                if (combinedVehicles.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(progress = progress / 100f)
-                        Text(text = "Loading... $progress%", fontSize = 20.sp)
+                        Text(
+                            text = "You have no vehicles",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray
+                        )
                     }
                 } else {
-                    if (bookingList.isEmpty()) {
-                        Text(text = "No bookings found", modifier = Modifier.align(Alignment.CenterHorizontally))
-                    } else {
-                        LazyVerticalGrid(columns = GridCells.Fixed(2)) {
-                            items(bookingList.take(displayedBookingCount)) { booking ->
-                                BookingListItem(booking) {
-                                    navController.navigate("bookingDetail/${booking.id}")
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (displayedBookingCount < bookingList.size) {
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xff0FB06A)),
-                                onClick = { displayedBookingCount += 8 },
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            ) {
-                                Text(text = "Load More")
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White)
+                            .padding(paddingValues)  // Apply padding values provided by Scaffold
+                    ) {
+                        items(combinedVehicles) { vehicle ->
+                            VehicleItem(vehicle) {
+                                navController.navigate("editvehicle/${vehicle.id}")
                             }
                         }
                     }
@@ -117,33 +137,50 @@ fun BookingListScreen(navController: NavController) {
 }
 
 @Composable
-fun BookingListItem(booking: Booking, onItemClick: (String) -> Unit) {
-    Card(
+fun VehicleItem(vehicle: Vehicle, onItemClick: (String) -> Unit) {
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onItemClick(booking.id) }
+            .width(180.dp)
+            .padding(vertical = 8.dp, horizontal = 8.dp)
+            .background(Color.White, shape = MaterialTheme.shapes.medium)
+            .shadow(elevation = 4.dp, shape = MaterialTheme.shapes.medium)
+            .padding(16.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .background(Color.LightGray)
         ) {
-            Column {
-                Text(text = booking.name, style = MaterialTheme.typography.bodyLarge)
-                Text(text = "Service: ${booking.service}", style = MaterialTheme.typography.bodyLarge)
-                Text(text = "Date: ${booking.bookingDate}", style = MaterialTheme.typography.bodyLarge)
-            }
+            Image(
+                painter = rememberAsyncImagePainter(model = vehicle.imageUrl),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = vehicle.name,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = vehicle.description,
+            fontSize = 14.sp,
+            color = Color.Gray,
+            maxLines = 2,
+            modifier = Modifier.padding(end = 4.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "\$${vehicle.price}",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF43A047)
+        )
     }
-}
-
-private suspend fun fetchBookings(onSuccess: (List<Booking>) -> Unit) {
-    val firestore = Firebase.firestore
-    val snapshot = firestore.collection("bookings").get().await()
-    val bookingList = snapshot.documents.mapNotNull { doc ->
-        val booking = doc.toObject<Booking>()
-        booking?.id = doc.id
-        booking
-    }
-    onSuccess(bookingList)
 }

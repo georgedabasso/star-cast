@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,6 +56,7 @@ import net.ezra.navigation.ROUTE_DASHBOARD
 import net.ezra.navigation.ROUTE_HOME
 import net.ezra.navigation.ROUTE_LOGIN
 import net.ezra.navigation.ROUTE_SEARCH
+import net.ezra.navigation.ROUTE_SHOPPING_CART
 import net.ezra.navigation.ROUTE_VIEW_PROD
 
 data class Screen(val title: String, val icon: Int)
@@ -63,6 +67,9 @@ data class Screen(val title: String, val icon: Int)
 fun HomeScreen(navController: NavHostController) {
 
     var isDrawerOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    val isLoggedIn: Boolean = sharedPreferences.getBoolean("isLoggedIn", false)
 
     val callLauncher: ManagedActivityResultLauncher<Intent, ActivityResult> =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { _ ->
@@ -73,7 +80,11 @@ fun HomeScreen(navController: NavHostController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text("StarCast Booking Agency")
+                    Text(
+                        "StarCast Booking Agency",
+                        color = Color.White,
+                        fontSize = 24.sp
+                    )
                 },
                 navigationIcon = @Composable {
                     if (!isDrawerOpen) {
@@ -89,8 +100,10 @@ fun HomeScreen(navController: NavHostController) {
 
                 actions = {
                     IconButton(onClick = {
-                        navController.navigate(ROUTE_LOGIN) {
-                            popUpTo(ROUTE_HOME) { inclusive = true }
+                        if (isLoggedIn) {
+                            navController.navigate(ROUTE_DASHBOARD) { popUpTo("home") { inclusive = true } }
+                        } else {
+                            navController.navigate(ROUTE_LOGIN) { popUpTo(ROUTE_HOME) { inclusive = true } }
                         }
                     }) {
                         Icon(
@@ -102,7 +115,7 @@ fun HomeScreen(navController: NavHostController) {
                 },
 
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Magenta,
+                    containerColor = Color(0xff6200EE),
                     titleContentColor = Color.White,
                 )
             )
@@ -117,6 +130,7 @@ fun HomeScreen(navController: NavHostController) {
                             isDrawerOpen = false
                         }
                     }
+                    .background(Color(0xFFF5F5F5))
             ) {
                 Column(
                     modifier = Modifier
@@ -135,17 +149,12 @@ fun HomeScreen(navController: NavHostController) {
                         onClick = {
                             navController.navigate(ROUTE_VIEW_PROD)
                         },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        colors = ButtonDefaults.buttonColors(Color(0xff6200EE))
                     ) {
-                        Text("View Vehicles")
-                    }
-                    Button(
-                        onClick = {
-                            navController.navigate(ROUTE_SEARCH)
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                    ) {
-                        Text("Search Services")
+                        Text("View Vehicles", color = Color.White)
                     }
                 }
             }
@@ -172,14 +181,14 @@ fun AnimatedDrawer(isOpen: Boolean, onClose: () -> Unit) {
         modifier = Modifier
             .fillMaxHeight()
             .width(drawerWidth.value.dp),
-        color = Color.LightGray,
+        color = Color(0xFFE0E0E0),
     ) {
-        Column {
-            Text(text = "Drawer Item 1")
-            Text(text = "Drawer Item 2")
-            Text(text = "Drawer Item 3", modifier = Modifier.clickable { })
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = stringResource(id = R.string.developer))
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(text = "Drawer Item 1", modifier = Modifier.padding(bottom = 8.dp))
+            Text(text = "Drawer Item 2", modifier = Modifier.padding(bottom = 8.dp))
+
         }
     }
 }
@@ -192,7 +201,7 @@ fun BottomBar(navController: NavHostController) {
     val selectedIndex = remember { mutableStateOf(0) }
     BottomNavigation(
         elevation = 10.dp,
-        backgroundColor = Color.Magenta,
+        backgroundColor = Color(0xff6200EE),
     ) {
         BottomNavigationItem(icon = {
             Icon(imageVector = Icons.Default.Home, "", tint = Color.White)
@@ -200,33 +209,19 @@ fun BottomBar(navController: NavHostController) {
             label = { Text(text = "Home", color = Color.White) },
             selected = (selectedIndex.value == 0), onClick = {
                 selectedIndex.value = 0
-                navController.navigate(ROUTE_HOME) {
-                    popUpTo(ROUTE_HOME) { inclusive = true }
-                }
-            })
-
-        BottomNavigationItem(icon = {
-            Icon(imageVector = Icons.Default.Favorite, "", tint = Color.White)
-        },
-
-            label = { Text(text = "Favorite", color = Color.White) },
-            selected = (selectedIndex.value == 1), onClick = {
-
-
-                selectedIndex.value = 1
-            })
-
-        BottomNavigationItem(icon = {
-            Icon(imageVector = Icons.Default.Person, "", tint = Color.White)
-        },
-            label = { Text(text = "Profile", color = Color.White) },
-            selected = (selectedIndex.value == 2), onClick = {
-                selectedIndex.value = 3
                 if (isLoggedIn) {
                     navController.navigate(ROUTE_DASHBOARD) { popUpTo("home") { inclusive = true } }
                 } else {
-                    navController.navigate(ROUTE_LOGIN) { popUpTo("home") { inclusive = true } }
+                    navController.navigate(ROUTE_LOGIN) { popUpTo(ROUTE_HOME) { inclusive = true } }
                 }
+            })
+        BottomNavigationItem(icon = {
+            Icon(imageVector = Icons.Default.PlayArrow, "", tint = Color.White)
+        },
+            label = { Text(text = "Your Bookings", color = Color.White) },
+            selected = (selectedIndex.value == 2), onClick = {
+                selectedIndex.value = 3
+                navController.navigate(ROUTE_SHOPPING_CART)
                 selectedIndex.value = 2
             })
     }
